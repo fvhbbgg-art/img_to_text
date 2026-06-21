@@ -1,0 +1,10 @@
+[build]
+  publish = "public"
+  functions = "netlify/functions"
+
+# يسمح للواجهة الأمامية بمناداة "/api/ai" بدل المسار الطويل
+# "/.netlify/functions/ai" — نفس الفكرة المستخدمة في نسخة Vercel.
+[[redirects]]
+  from = "/api/ai"
+  to = "/.netlify/functions/ai"
+  status = 200

@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>مِسبار — استخراج النص من الصور</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/4.1.1/tesseract.min.js"></script>
+<style>
+@font-face{font-family:'sysfallback';src:local('Arial');}
+:root{
+  --paper:#0d1117;
+  --paper-raised:#141a22;
+  --line:#22303c;
+  --ink:#e8edf2;
+  --ink-dim:#8b9aa8;
+  --lamp:#ff6b35;
+  --lamp-dim:#3a2418;
+  --scan:#3ecf8e;
+  --scan-dim:#0f2a1f;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{
+  background:var(--paper);
+  color:var(--ink);
+  font-family:'Tajawal','Segoe UI',sans-serif;
+  min-height:100vh;
+  position:relative;
+  overflow-x:hidden;
+}
+body::before{
+  content:'';
+  position:fixed; inset:0;
+  background-image:
+    linear-gradient(var(--line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line) 1px, transparent 1px);
+  background-size:48px 48px;
+  opacity:.15;
+  pointer-events:none;
+  z-index:0;
+}
+.wrap{position:relative; z-index:1; max-width:1100px; margin:0 auto; padding:28px 20px 80px;}
+
+/* HEADER */
+header{
+  display:flex; align-items:center; justify-content:space-between;
+  padding-bottom:24px; border-bottom:1px solid var(--line); margin-bottom:36px;
+  flex-wrap:wrap; gap:14px;
+}
+.brand{display:flex; align-items:center; gap:12px;}
+.brand-mark{
+  width:38px; height:38px; border-radius:10px;
+  background:linear-gradient(135deg,var(--lamp),#ff9159);
+  display:flex; align-items:center; justify-content:center;
+  font-size:20px; box-shadow:0 0 24px rgba(255,107,53,.4);
+}
+.brand h1{font-size:21px; font-weight:800; letter-spacing:.5px;}
+.brand p{font-size:12px; color:var(--ink-dim); margin-top:2px;}
+.status-pill{
+  font-size:11px; color:var(--scan); border:1px solid var(--scan-dim);
+  background:var(--scan-dim); padding:6px 12px; border-radius:999px;
+  display:flex; align-items:center; gap:6px;
+}
+.status-pill .dot{width:6px; height:6px; border-radius:50%; background:var(--scan); box-shadow:0 0 8px var(--scan);}
+
+/* HERO / SCANNER */
+.scanner{
+  position:relative;
+  border:1px solid var(--line);
+  background:var(--paper-raised);
+  border-radius:18px;
+  padding:0;
+  overflow:hidden;
+  margin-bottom:28px;
+}
+.scanner-head{
+  padding:18px 22px; border-bottom:1px dashed var(--line);
+  display:flex; justify-content:space-between; align-items:center;
+}
+.scanner-head h2{font-size:15px; font-weight:700; color:var(--ink);}
+.scanner-head span{font-size:11px; color:var(--ink-dim); font-family:monospace;}
+.lang-row{
+  display:flex; align-items:center; gap:10px; padding:14px 22px 0;
+  font-size:12.5px; color:var(--ink-dim); flex-wrap:wrap;
+}
+.lang-row select{
+  background:#0a0e13; color:var(--ink); border:1px solid var(--line);
+  border-radius:8px; padding:6px 10px; font-size:12.5px; font-family:inherit; cursor:pointer;
+}
+.lang-row select:focus{outline:none; border-color:var(--scan);}
+.lang-hint{
+  margin:8px 22px 0; font-size:11.5px; color:var(--lamp);
+  background:var(--lamp-dim); border:1px solid #4a2a18;
+  padding:8px 12px; border-radius:8px;
+}
+
+.dropzone{
+  margin:22px; padding:42px 20px;
+  border:1.5px dashed #2c3b48;
+  border-radius:14px;
+  text-align:center;
+  cursor:pointer;
+  transition:.25s;
+  position:relative;
+}
+.dropzone:hover, .dropzone.drag{
+  border-color:var(--lamp);
+  background:rgba(255,107,53,.04);
+}
+.dropzone .icon{font-size:34px; margin-bottom:10px; opacity:.85;}
+.dropzone h3{font-size:16px; margin-bottom:6px;}
+.dropzone p{font-size:12.5px; color:var(--ink-dim);}
+.dropzone input{display:none;}
+
+.preview-area{
+  margin:0 22px 22px; display:none;
+  border:1px solid var(--line); border-radius:14px;
+  overflow:hidden; background:#000;
+}
+.preview-area.show{display:block;}
+.preview-area img{width:100%; max-height:340px; object-fit:contain; display:block; background:repeating-linear-gradient(45deg,#0a0e13,#0a0e13 10px,#0c1117 10px,#0c1117 20px);}
+
+.scan-line{
+  position:absolute; left:0; right:0; height:2px;
+  background:linear-gradient(90deg, transparent, var(--scan), transparent);
+  box-shadow:0 0 12px var(--scan);
+  animation:scanmove 1.6s linear infinite;
+  display:none;
+}
+.scanning .scan-line{display:block;}
+@keyframes scanmove{0%{top:0;}100%{top:100%;}}
+
+.actions-row{
+  display:flex; gap:10px; padding:0 22px 22px; flex-wrap:wrap;
+}
+button{
+  font-family:inherit; cursor:pointer; border:none; outline:none;
+}
+.btn{
+  font-size:13.5px; font-weight:700; padding:11px 20px; border-radius:10px;
+  transition:.18s; display:inline-flex; align-items:center; gap:8px;
+}
+.btn-primary{background:var(--lamp); color:#16110c;}
+.btn-primary:hover{background:#ff7e4d; transform:translateY(-1px);}
+.btn-primary:disabled{opacity:.4; cursor:not-allowed; transform:none;}
+.btn-ghost{background:transparent; color:var(--ink); border:1px solid var(--line);}
+.btn-ghost:hover{border-color:var(--ink-dim);}
+
+/* RESULT */
+.result-card{
+  border:1px solid var(--line); background:var(--paper-raised);
+  border-radius:18px; padding:22px; margin-bottom:28px;
+  display:none;
+}
+.result-card.show{display:block;}
+.result-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;}
+.result-head h2{font-size:15px; font-weight:700;}
+.result-head .meta{font-size:11px; color:var(--ink-dim); font-family:monospace;}
+
+textarea.extracted{
+  width:100%; min-height:160px; resize:vertical;
+  background:#0a0e13; border:1px solid var(--line); border-radius:12px;
+  color:var(--ink); padding:16px; font-size:14px; line-height:1.9;
+  font-family:'Tajawal',sans-serif;
+}
+textarea.extracted:focus{border-color:var(--scan); outline:none;}
+
+.result-actions{display:flex; gap:10px; margin-top:14px; flex-wrap:wrap;}
+.toast{
+  position:fixed; bottom:26px; left:50%; transform:translateX(-50%) translateY(20px);
+  background:#1b232c; border:1px solid var(--line); color:var(--ink);
+  padding:11px 20px; border-radius:10px; font-size:13px;
+  opacity:0; transition:.3s; pointer-events:none; z-index:50;
+}
+.toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+
+/* DIVIDER */
+.section-label{
+  display:flex; align-items:center; gap:14px; margin:46px 0 18px;
+}
+.section-label .num{
+  font-family:monospace; font-size:11px; color:var(--lamp);
+  border:1px solid var(--lamp-dim); background:var(--lamp-dim);
+  padding:4px 10px; border-radius:7px;
+}
+.section-label h2{font-size:17px; font-weight:800;}
+.section-label .rule{flex:1; height:1px; background:var(--line);}
+
+/* CHAT */
+.chat-card{
+  border:1px solid var(--line); background:var(--paper-raised);
+  border-radius:18px; overflow:hidden;
+}
+.chat-log{
+  min-height:220px; max-height:440px; overflow-y:auto;
+  padding:22px; display:flex; flex-direction:column; gap:14px;
+}
+.msg{max-width:82%; padding:13px 16px; border-radius:14px; font-size:14px; line-height:1.85; white-space:pre-wrap;}
+.msg.user{align-self:flex-end; background:var(--lamp-dim); border:1px solid #4a2a18; color:#ffd8c2; border-bottom-left-radius:4px;}
+.msg.ai{align-self:flex-start; background:#10161d; border:1px solid var(--line); border-bottom-right-radius:4px;}
+.msg.empty-state{align-self:center; color:var(--ink-dim); font-size:13px; text-align:center; max-width:90%; padding:30px 10px;}
+.msg.typing{align-self:flex-start; color:var(--ink-dim); font-size:13px; display:flex; align-items:center; gap:6px;}
+.typing-dots span{width:5px; height:5px; border-radius:50%; background:var(--scan); display:inline-block; margin:0 1px; animation:blink 1.2s infinite;}
+.typing-dots span:nth-child(2){animation-delay:.2s;}
+.typing-dots span:nth-child(3){animation-delay:.4s;}
+@keyframes blink{0%,80%,100%{opacity:.2;}40%{opacity:1;}}
+
+.chat-input-bar{
+  border-top:1px solid var(--line); padding:16px 18px;
+  display:flex; gap:10px; align-items:flex-end; background:#0f151c;
+}
+.chat-input-bar textarea{
+  flex:1; resize:none; max-height:120px; min-height:46px;
+  background:#0a0e13; border:1px solid var(--line); border-radius:12px;
+  color:var(--ink); padding:12px 14px; font-size:14px; font-family:inherit; line-height:1.6;
+}
+.chat-input-bar textarea:focus{outline:none; border-color:var(--scan);}
+.send-btn{
+  width:46px; height:46px; border-radius:12px; background:var(--scan);
+  color:#06150e; font-size:18px; display:flex; align-items:center; justify-content:center;
+  flex-shrink:0; transition:.18s;
+}
+.send-btn:hover{background:#56e0a4;}
+.send-btn:disabled{opacity:.4; cursor:not-allowed;}
+
+footer{text-align:center; color:var(--ink-dim); font-size:11.5px; margin-top:50px; font-family:monospace;}
+
+@media(max-width:600px){
+  .brand h1{font-size:18px;}
+  .scanner-head{flex-direction:column; align-items:flex-start; gap:4px;}
+  .dropzone{padding:30px 14px;}
+  .msg{max-width:92%;}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="brand">
+      <div class="brand-mark">👁️</div>
+      <div>
+        <h1>مِسبار</h1>
+        <p>استخراج النص من الصور بدقّة، ثم تلخيصه بالذكاء الاصطناعي</p>
+      </div>
+    </div>
+    <div class="status-pill"><span class="dot"></span> المحرك جاهز محليًا في متصفحك</div>
+  </header>
+
+  <!-- SCANNER -->
+  <div class="scanner" id="scannerBox">
+    <div class="scanner-head">
+      <h2>1 — ارفع صورة لاستخراج النص منها</h2>
+      <span id="engineStatus">OCR.engine // idle</span>
+    </div>
+    <div class="lang-row">
+      <label for="langToggle">لغة النص في الصورة:</label>
+      <select id="langToggle">
+        <option value="ara+eng" selected>عربي + إنجليزي (الافتراضي)</option>
+        <option value="ara">عربي فقط (أدق للنصوص العربية الخالصة)</option>
+        <option value="eng">إنجليزي فقط (أسرع)</option>
+      </select>
+    </div>
+    <p class="lang-hint">⚠️ مهم: اختر اللغة الصحيحة قبل الاستخراج — استخدام لغة خاطئة هو السبب الأكثر شيوعًا لنص مشوّه وغير مفهوم.</p>
+
+    <div class="dropzone" id="dropzone">
+      <input type="file" id="fileInput" accept="image/*">
+      <div class="icon">🖼️</div>
+      <h3>اسحب الصورة هنا أو انقر للاختيار</h3>
+      <p>يدعم JPG وPNG وWEBP — يفضّل أن يكون النص واضحًا للحصول على أفضل نتيجة</p>
+    </div>
+
+    <div class="preview-area" id="previewArea">
+      <div class="scan-line" id="scanLine"></div>
+      <img id="previewImg" alt="الصورة المرفوعة">
+    </div>
+
+    <div class="actions-row" id="actionsRow" style="display:none;">
+      <button class="btn btn-primary" id="extractBtn">🔍 استخرج النص الآن</button>
+      <button class="btn btn-ghost" id="resetBtn">↺ صورة أخرى</button>
+    </div>
+  </div>
+
+  <!-- RESULT -->
+  <div class="result-card" id="resultCard">
+    <div class="result-head">
+      <h2>2 — النص المستخرج</h2>
+      <span class="meta" id="confMeta"></span>
+    </div>
+    <textarea class="extracted" id="extractedText" placeholder="سيظهر النص هنا..."></textarea>
+    <div class="result-actions">
+      <button class="btn btn-ghost" id="copyBtn">📋 نسخ النص فقط</button>
+      <button class="btn btn-ghost" id="formatBtn">🧹 ترتيب النص بالذكاء الاصطناعي</button>
+      <button class="btn btn-primary" id="sendToAiBtn">✨ إرسال إلى الذكاء الاصطناعي للتلخيص</button>
+    </div>
+  </div>
+
+  <!-- CHAT SECTION -->
+  <div class="section-label">
+    <span class="num">02</span>
+    <h2>محادثة الذكاء الاصطناعي</h2>
+    <div class="rule"></div>
+  </div>
+
+  <div class="chat-card">
+    <div class="chat-log" id="chatLog">
+      <div class="msg empty-state" id="emptyState">
+        لا توجد رسائل بعد. استخرج نصًا من صورة وأرسله هنا للتلخيص، أو اكتب أي سؤال مباشرة 👇
+      </div>
+    </div>
+    <div class="chat-input-bar">
+      <textarea id="chatInput" rows="1" placeholder="اكتب رسالتك..."></textarea>
+      <button class="send-btn" id="sendBtn">➤</button>
+    </div>
+  </div>
+
+  <footer>مِسبار — استخراج محلي عبر Tesseract.js · تلخيص عبر Claude</footer>
+</div>
+
+<div class="toast" id="toast">تم النسخ</div>
+
+<script>
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('fileInput');
+const previewArea = document.getElementById('previewArea');
+const previewImg = document.getElementById('previewImg');
+const scannerBox = document.getElementById('scannerBox');
+const actionsRow = document.getElementById('actionsRow');
+const extractBtn = document.getElementById('extractBtn');
+const resetBtn = document.getElementById('resetBtn');
+const engineStatus = document.getElementById('engineStatus');
+const resultCard = document.getElementById('resultCard');
+const extractedText = document.getElementById('extractedText');
+const confMeta = document.getElementById('confMeta');
+const copyBtn = document.getElementById('copyBtn');
+const sendToAiBtn = document.getElementById('sendToAiBtn');
+const toast = document.getElementById('toast');
+
+let currentFile = null;
+
+function showToast(msg){
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(()=>toast.classList.remove('show'), 1800);
+}
+
+dropzone.addEventListener('click', ()=> fileInput.click());
+dropzone.addEventListener('dragover', e=>{e.preventDefault(); dropzone.classList.add('drag');});
+dropzone.addEventListener('dragleave', ()=> dropzone.classList.remove('drag'));
+dropzone.addEventListener('drop', e=>{
+  e.preventDefault(); dropzone.classList.remove('drag');
+  if(e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', e=>{
+  if(e.target.files[0]) handleFile(e.target.files[0]);
+});
+
+function handleFile(file){
+  if(!file.type.startsWith('image/')){ showToast('الرجاء اختيار ملف صورة'); return; }
+  currentFile = file;
+  const url = URL.createObjectURL(file);
+  previewImg.src = url;
+  previewArea.classList.add('show');
+  dropzone.style.display = 'none';
+  actionsRow.style.display = 'flex';
+  resultCard.classList.remove('show');
+}
+
+resetBtn.addEventListener('click', ()=>{
+  currentFile = null;
+  fileInput.value = '';
+  previewArea.classList.remove('show');
+  dropzone.style.display = 'block';
+  actionsRow.style.display = 'none';
+  resultCard.classList.remove('show');
+  engineStatus.textContent = 'OCR.engine // idle';
+});
+
+// Resize large images before OCR — recognition time scales with pixel count.
+// Kept deliberately simple: no aggressive contrast/binarization, since that distorted
+// characters and made recognition worse. Just a clean resize at good resolution.
+function resizeImageForOCR(file, maxDim){
+  return new Promise((resolve)=>{
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = ()=>{
+      let { width, height } = img;
+      if(width > maxDim || height > maxDim){
+        const scale = maxDim / Math.max(width, height);
+        width = Math.round(width * scale);
+        height = Math.round(height * scale);
+      } else if(Math.max(width, height) < 800){
+        const scale = 800 / Math.max(width, height);
+        width = Math.round(width * scale);
+        height = Math.round(height * scale);
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width; canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0,0,width,height);
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(img, 0, 0, width, height);
+      URL.revokeObjectURL(url);
+      canvas.toBlob(blob=> resolve(blob), 'image/png');
+    };
+    img.src = url;
+  });
+}
+
+// Keep one worker alive across scans for speed, but build it safely and
+// recreate it cleanly whenever the language changes — no race conditions.
+let ocrWorker = null;
+let ocrWorkerLang = null;
+let workerBuildPromise = null;
+
+async function getWorker(lang){
+  // If a build is already in flight for this language, wait for it instead of starting another.
+  if(workerBuildPromise && ocrWorkerLang === lang) return workerBuildPromise;
+  if(ocrWorker && ocrWorkerLang === lang) return ocrWorker;
+
+  workerBuildPromise = (async ()=>{
+    if(ocrWorker){
+      try{ await ocrWorker.terminate(); }catch(e){}
+      ocrWorker = null;
+    }
+    engineStatus.textContent = 'OCR.engine // تحميل النموذج...';
+    const worker = await Tesseract.createWorker(lang, undefined, {
+      logger: m=>{
+        if(m.status === 'recognizing text'){
+          engineStatus.textContent = `OCR.engine // ${Math.round(m.progress*100)}%`;
+        } else if(m.status){
+          engineStatus.textContent = `OCR.engine // ${m.status}`;
+        }
+      }
+    });
+    ocrWorker = worker;
+    ocrWorkerLang = lang;
+    return worker;
+  })();
+
+  try{
+    return await workerBuildPromise;
+  }finally{
+    workerBuildPromise = null;
+  }
+}
+
+// Basic local cleanup applied to every OCR result, free and instant:
+// fixes the most common raw-OCR mess (stray line breaks mid-sentence, repeated
+// blank lines, extra spaces) without needing a network call.
+function cleanOcrText(raw){
+  if(!raw) return '';
+  let lines = raw.replace(/\r/g,'').split('\n').map(l=> l.replace(/[ \t]+/g,' ').trim());
+
+  const merged = [];
+  for(let i=0; i<lines.length; i++){
+    const line = lines[i];
+    if(line === ''){ merged.push(''); continue; }
+    const prev = merged[merged.length-1];
+    const endsLikeSentence = /[.!؟?:؛؛]$/.test(prev || '');
+    const looksLikeNewBullet = /^[-•\d\u0660-\u0669]/.test(line);
+    // Glue a line onto the previous one if the previous line doesn't look finished —
+    // this is what turns "النص المبعثر\nعلى عدة أسطر" into one coherent sentence.
+    if(prev && prev !== '' && !endsLikeSentence && !looksLikeNewBullet && prev.length > 0){
+      merged[merged.length-1] = prev + ' ' + line;
+    } else {
+      merged.push(line);
+    }
+  }
+
+  return merged
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+extractBtn.addEventListener('click', async ()=>{
+  if(!currentFile) return;
+  extractBtn.disabled = true;
+  extractBtn.textContent = '⏳ جارٍ المسح...';
+  scannerBox.classList.add('scanning');
+  engineStatus.textContent = 'OCR.engine // تجهيز الصورة...';
+
+  try{
+    const lang = document.getElementById('langToggle').value;
+    const resized = await resizeImageForOCR(currentFile, 2200);
+
+    let result;
+    try{
+      const worker = await getWorker(lang);
+      // PSM 3 = fully automatic page segmentation (Tesseract's own default and most reliable
+      // general-purpose mode). Forcing "single uniform block" earlier was actually causing
+      // more scrambled output on real-world photos with mixed paragraphs/lines.
+      await worker.setParameters({
+        tessedit_pageseg_mode: '3',
+        preserve_interword_spaces: '1'
+      });
+      result = await worker.recognize(resized);
+    }catch(workerErr){
+      // Fallback: if the persistent-worker path fails for any reason,
+      // fall back to the simpler one-shot API which manages its own worker internally.
+      console.warn('worker path failed, falling back:', workerErr);
+      ocrWorker = null; ocrWorkerLang = null;
+      result = await Tesseract.recognize(resized, lang, {
+        logger: m=>{
+          if(m.status === 'recognizing text'){
+            engineStatus.textContent = `OCR.engine // ${Math.round(m.progress*100)}%`;
+          }
+        }
+      });
+    }
+
+    const cleaned = cleanOcrText(result.data.text);
+    extractedText.value = cleaned || '(لم يتم العثور على نص واضح في الصورة، جرّب صورة أوضح أو غيّر اللغة)';
+    confMeta.textContent = `ثقة التعرّف: ${Math.round(result.data.confidence)}%`;
+    resultCard.classList.add('show');
+    resultCard.scrollIntoView({behavior:'smooth', block:'start'});
+  }catch(err){
+    console.error('OCR error:', err);
+    showToast('فشل الاستخراج: ' + (err && err.message ? err.message : 'خطأ غير معروف'));
+  }finally{
+    extractBtn.disabled = false;
+    extractBtn.textContent = '🔍 استخرج النص الآن';
+    scannerBox.classList.remove('scanning');
+    engineStatus.textContent = 'OCR.engine // done';
+  }
+});
+
+const formatBtn = document.getElementById('formatBtn');
+formatBtn.addEventListener('click', async ()=>{
+  const text = extractedText.value.trim();
+  if(!text) return;
+  formatBtn.disabled = true;
+  const originalLabel = formatBtn.textContent;
+  formatBtn.textContent = '⏳ جارٍ الترتيب...';
+  try{
+    const prompt = `أعد ترتيب النص التالي المستخرج من صورة عبر OCR ليكون مقروءًا ومنظّمًا في أسطر وفقرات صحيحة، مع تصحيح أماكن فواصل الأسطر الخاطئة وإصلاح أي التباس بسيط في الكلمات الناتج عن خطأ المسح الضوئي، دون تلخيص أو حذف أو إضافة أي معلومة، ودون أي تعليق إضافي مني — أعد النص المُرتّب فقط:\n\n"""${text}"""`;
+    const response = await fetch("/api/ai", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt })
+    });
+    const data = await response.json();
+    if(!response.ok){
+      throw new Error((data && data.error) || `HTTP ${response.status}`);
+    }
+    const formatted = (data.text || '').trim();
+    if(formatted){
+      extractedText.value = formatted;
+      showToast('تم ترتيب النص');
+    }
+  }catch(err){
+    console.error(err);
+    showToast('تعذّر ترتيب النص: ' + (err && err.message ? err.message : 'خطأ غير معروف'));
+  }finally{
+    formatBtn.disabled = false;
+    formatBtn.textContent = originalLabel;
+  }
+});
+
+copyBtn.addEventListener('click', ()=>{
+  const text = extractedText.value;
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(()=>{
+      showToast('تم نسخ النص بنجاح');
+    }).catch(()=> fallbackCopy(text));
+  } else {
+    fallbackCopy(text);
+  }
+});
+
+function fallbackCopy(text){
+  try{
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.focus(); ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast('تم نسخ النص بنجاح');
+  }catch(e){
+    showToast('تعذّر النسخ التلقائي، انسخ النص يدويًا');
+  }
+}
+
+sendToAiBtn.addEventListener('click', ()=>{
+  const text = extractedText.value.trim();
+  if(!text) return;
+  pushMessage('user', text);
+  requestSummary(text);
+  resultCard.scrollIntoView({behavior:'smooth'});
+  document.querySelector('.chat-card').scrollIntoView({behavior:'smooth', block:'end'});
+});
+
+/* ===== CHAT ===== */
+const chatLog = document.getElementById('chatLog');
+const chatInput = document.getElementById('chatInput');
+const sendBtn = document.getElementById('sendBtn');
+const emptyState = document.getElementById('emptyState');
+
+chatInput.addEventListener('input', ()=>{
+  chatInput.style.height = 'auto';
+  chatInput.style.height = Math.min(chatInput.scrollHeight, 120) + 'px';
+});
+chatInput.addEventListener('keydown', e=>{
+  if(e.key === 'Enter' && !e.shiftKey){
+    e.preventDefault();
+    sendUserMessage();
+  }
+});
+sendBtn.addEventListener('click', sendUserMessage);
+
+function sendUserMessage(){
+  const text = chatInput.value.trim();
+  if(!text) return;
+  pushMessage('user', text);
+  chatInput.value = '';
+  chatInput.style.height = 'auto';
+  callAI(text, false);
+}
+
+function pushMessage(role, text){
+  if(emptyState) emptyState.style.display = 'none';
+  const div = document.createElement('div');
+  div.className = 'msg ' + (role === 'user' ? 'user' : 'ai');
+  div.textContent = text;
+  chatLog.appendChild(div);
+  chatLog.scrollTop = chatLog.scrollHeight;
+  return div;
+}
+
+function pushTyping(){
+  const div = document.createElement('div');
+  div.className = 'msg typing';
+  div.innerHTML = 'الذكاء الاصطناعي يكتب <span class="typing-dots"><span></span><span></span><span></span></span>';
+  chatLog.appendChild(div);
+  chatLog.scrollTop = chatLog.scrollHeight;
+  return div;
+}
+
+function requestSummary(text){
+  callAI(text, true);
+}
+
+async function callAI(text, isSummary){
+  const typingEl = pushTyping();
+  sendBtn.disabled = true;
+
+  const promptInstruction = isSummary
+    ? `لخّص النص التالي المستخرج من صورة بشكل واضح ومرتب باللغة العربية، مع إبراز أهم النقاط في نقاط مختصرة إن أمكن:\n\n"""${text}"""`
+    : text;
+
+  try{
+    const response = await fetch("/api/ai", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt: promptInstruction })
+    });
+    const data = await response.json();
+    if(!response.ok){
+      throw new Error((data && data.error) || `HTTP ${response.status}`);
+    }
+    const reply = (data.text || '').trim() || 'تعذّر الحصول على رد.';
+    typingEl.remove();
+    pushMessage('ai', reply);
+  }catch(err){
+    typingEl.remove();
+    pushMessage('ai', 'حدث خطأ في الاتصال بالذكاء الاصطناعي: ' + (err && err.message ? err.message : 'غير معروف'));
+    console.error(err);
+  }finally{
+    sendBtn.disabled = false;
+  }
+}
+</script>
+</body>
+</html>
