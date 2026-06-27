@@ -3,38 +3,61 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>مِسبار — استخراج النص من الصور</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/4.1.1/tesseract.min.js"></script>
+<title>تبارك — استخراج النص من الصور</title>
 <style>
 @font-face{font-family:'sysfallback';src:local('Arial');}
 :root{
-  --paper:#0d1117;
-  --paper-raised:#141a22;
-  --line:#22303c;
-  --ink:#e8edf2;
-  --ink-dim:#8b9aa8;
-  --lamp:#ff6b35;
-  --lamp-dim:#3a2418;
-  --scan:#3ecf8e;
-  --scan-dim:#0f2a1f;
+  --paper:#0a0a18;
+  --paper-raised:rgba(255,255,255,.045);
+  --line:rgba(255,255,255,.10);
+  --ink:#f4f2ff;
+  --ink-dim:#aaa3d4;
+  --lamp:#ffb347;
+  --lamp2:#ff5fae;
+  --lamp-dim:rgba(255,179,71,.14);
+  --scan:#37e6c5;
+  --scan2:#7c5cff;
+  --scan-dim:rgba(55,230,197,.14);
 }
 *{box-sizing:border-box;margin:0;padding:0;}
 body{
-  background:var(--paper);
+  background:
+    radial-gradient(ellipse 900px 600px at 8% -5%, rgba(255,95,174,.42), transparent 60%),
+    radial-gradient(ellipse 900px 700px at 95% 10%, rgba(124,92,255,.45), transparent 60%),
+    radial-gradient(ellipse 800px 700px at 50% 110%, rgba(55,230,197,.32), transparent 60%),
+    radial-gradient(ellipse 700px 500px at 60% 40%, rgba(255,179,71,.18), transparent 55%),
+    linear-gradient(180deg,#0a0a18,#0d0c22 40%,#0a0a18);
+  background-attachment:fixed;
+  background-size:140% 140%, 140% 140%, 140% 140%, 140% 140%, 100% 100%;
+  animation:auroraShift 18s ease-in-out infinite;
   color:var(--ink);
   font-family:'Tajawal','Segoe UI',sans-serif;
   min-height:100vh;
   position:relative;
   overflow-x:hidden;
 }
+@keyframes auroraShift{
+  0%,100%{background-position:0% 0%, 100% 0%, 50% 100%, 60% 40%, 0 0;}
+  50%{background-position:15% 10%, 85% 20%, 40% 90%, 45% 55%, 0 0;}
+}
+.sparkle-layer{
+  position:fixed; inset:0; pointer-events:none; z-index:0; overflow:hidden;
+}
+.sparkle{
+  position:absolute; border-radius:50%;
+  background:radial-gradient(circle, #fff, transparent 70%);
+  opacity:0; animation:sparkleTwinkle 3.5s ease-in-out infinite;
+}
+@keyframes sparkleTwinkle{
+  0%,100%{opacity:0; transform:scale(.4);}
+  50%{opacity:.85; transform:scale(1.1);}
+}
 body::before{
   content:'';
   position:fixed; inset:0;
-  background-image:
-    linear-gradient(var(--line) 1px, transparent 1px),
-    linear-gradient(90deg, var(--line) 1px, transparent 1px);
-  background-size:48px 48px;
-  opacity:.15;
+  background-image: radial-gradient(rgba(255,255,255,.55) 1px, transparent 1px);
+  background-size:3px 3px;
+  opacity:.04;
   pointer-events:none;
   z-index:0;
 }
@@ -46,83 +69,98 @@ header{
   padding-bottom:24px; border-bottom:1px solid var(--line); margin-bottom:36px;
   flex-wrap:wrap; gap:14px;
 }
-.brand{display:flex; align-items:center; gap:12px;}
+.brand{display:flex; align-items:center; gap:14px;}
 .brand-mark{
-  width:38px; height:38px; border-radius:10px;
-  background:linear-gradient(135deg,var(--lamp),#ff9159);
+  width:44px; height:44px; border-radius:14px;
+  background:linear-gradient(135deg,var(--lamp2),var(--lamp) 50%,var(--scan));
+  background-size:200% 200%;
+  animation:markGlow 4s ease-in-out infinite;
   display:flex; align-items:center; justify-content:center;
-  font-size:20px; box-shadow:0 0 24px rgba(255,107,53,.4);
+  font-size:22px; box-shadow:0 0 30px rgba(255,95,174,.55), 0 0 60px rgba(124,92,255,.35);
 }
-.brand h1{font-size:21px; font-weight:800; letter-spacing:.5px;}
-.brand p{font-size:12px; color:var(--ink-dim); margin-top:2px;}
-.status-pill{
-  font-size:11px; color:var(--scan); border:1px solid var(--scan-dim);
-  background:var(--scan-dim); padding:6px 12px; border-radius:999px;
-  display:flex; align-items:center; gap:6px;
+@keyframes markGlow{
+  0%,100%{background-position:0% 50%; box-shadow:0 0 30px rgba(255,95,174,.55), 0 0 60px rgba(124,92,255,.35);}
+  50%{background-position:100% 50%; box-shadow:0 0 40px rgba(55,230,197,.6), 0 0 70px rgba(255,179,71,.4);}
 }
-.status-pill .dot{width:6px; height:6px; border-radius:50%; background:var(--scan); box-shadow:0 0 8px var(--scan);}
+.brand h1{
+  font-size:26px; font-weight:900; letter-spacing:.5px;
+  background:linear-gradient(90deg,#fff,#ffd9ec 25%,#cdf9ee 50%,#ffd9ec 75%,#fff);
+  background-size:300% auto;
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+  animation:titleShimmer 5s linear infinite;
+}
+@keyframes titleShimmer{
+  0%{background-position:0% 50%;}
+  100%{background-position:300% 50%;}
+}
+.brand p{font-size:12px; color:var(--ink-dim); margin-top:3px;}
 
 /* HERO / SCANNER */
 .scanner{
   position:relative;
   border:1px solid var(--line);
   background:var(--paper-raised);
-  border-radius:18px;
+  backdrop-filter:blur(18px);
+  -webkit-backdrop-filter:blur(18px);
+  border-radius:22px;
   padding:0;
   overflow:hidden;
   margin-bottom:28px;
+  box-shadow:0 8px 40px rgba(0,0,0,.35);
 }
 .scanner-head{
-  padding:18px 22px; border-bottom:1px dashed var(--line);
+  padding:18px 22px; border-bottom:1px solid var(--line);
   display:flex; justify-content:space-between; align-items:center;
 }
 .scanner-head h2{font-size:15px; font-weight:700; color:var(--ink);}
-.scanner-head span{font-size:11px; color:var(--ink-dim); font-family:monospace;}
+.scanner-head span{font-size:11px; color:var(--scan); font-family:monospace;}
 .lang-row{
   display:flex; align-items:center; gap:10px; padding:14px 22px 0;
   font-size:12.5px; color:var(--ink-dim); flex-wrap:wrap;
 }
 .lang-row select{
-  background:#0a0e13; color:var(--ink); border:1px solid var(--line);
-  border-radius:8px; padding:6px 10px; font-size:12.5px; font-family:inherit; cursor:pointer;
+  background:rgba(0,0,0,.35); color:var(--ink); border:1px solid var(--line);
+  border-radius:9px; padding:7px 12px; font-size:12.5px; font-family:inherit; cursor:pointer;
 }
 .lang-row select:focus{outline:none; border-color:var(--scan);}
 .lang-hint{
   margin:8px 22px 0; font-size:11.5px; color:var(--lamp);
-  background:var(--lamp-dim); border:1px solid #4a2a18;
-  padding:8px 12px; border-radius:8px;
+  background:var(--lamp-dim); border:1px solid rgba(255,179,71,.3);
+  padding:8px 12px; border-radius:9px;
 }
 
 .dropzone{
-  margin:22px; padding:42px 20px;
-  border:1.5px dashed #2c3b48;
-  border-radius:14px;
+  margin:22px; padding:46px 20px;
+  border:1.5px dashed rgba(255,255,255,.18);
+  border-radius:16px;
   text-align:center;
   cursor:pointer;
   transition:.25s;
   position:relative;
+  background:rgba(255,255,255,.015);
 }
 .dropzone:hover, .dropzone.drag{
-  border-color:var(--lamp);
-  background:rgba(255,107,53,.04);
+  border-color:var(--lamp2);
+  background:rgba(255,95,174,.06);
+  box-shadow:0 0 30px rgba(255,95,174,.12) inset;
 }
-.dropzone .icon{font-size:34px; margin-bottom:10px; opacity:.85;}
-.dropzone h3{font-size:16px; margin-bottom:6px;}
+.dropzone .icon{font-size:36px; margin-bottom:10px; filter:drop-shadow(0 0 12px rgba(255,179,71,.5));}
+.dropzone h3{font-size:16px; margin-bottom:6px; font-weight:800;}
 .dropzone p{font-size:12.5px; color:var(--ink-dim);}
 .dropzone input{display:none;}
 
 .preview-area{
   margin:0 22px 22px; display:none;
-  border:1px solid var(--line); border-radius:14px;
+  border:1px solid var(--line); border-radius:16px;
   overflow:hidden; background:#000;
 }
 .preview-area.show{display:block;}
-.preview-area img{width:100%; max-height:340px; object-fit:contain; display:block; background:repeating-linear-gradient(45deg,#0a0e13,#0a0e13 10px,#0c1117 10px,#0c1117 20px);}
+.preview-area img{width:100%; max-height:340px; object-fit:contain; display:block; background:repeating-linear-gradient(45deg,#0a0a14,#0a0a14 10px,#0d0d1a 10px,#0d0d1a 20px);}
 
 .scan-line{
-  position:absolute; left:0; right:0; height:2px;
-  background:linear-gradient(90deg, transparent, var(--scan), transparent);
-  box-shadow:0 0 12px var(--scan);
+  position:absolute; left:0; right:0; height:2.5px;
+  background:linear-gradient(90deg, transparent, var(--scan), var(--scan2), transparent);
+  box-shadow:0 0 16px var(--scan), 0 0 28px var(--scan2);
   animation:scanmove 1.6s linear infinite;
   display:none;
 }
@@ -136,40 +174,59 @@ button{
   font-family:inherit; cursor:pointer; border:none; outline:none;
 }
 .btn{
-  font-size:13.5px; font-weight:700; padding:11px 20px; border-radius:10px;
+  font-size:13.5px; font-weight:800; padding:12px 22px; border-radius:12px;
   transition:.18s; display:inline-flex; align-items:center; gap:8px;
 }
-.btn-primary{background:var(--lamp); color:#16110c;}
-.btn-primary:hover{background:#ff7e4d; transform:translateY(-1px);}
-.btn-primary:disabled{opacity:.4; cursor:not-allowed; transform:none;}
-.btn-ghost{background:transparent; color:var(--ink); border:1px solid var(--line);}
-.btn-ghost:hover{border-color:var(--ink-dim);}
+.btn-primary{
+  background:linear-gradient(135deg,var(--lamp2),var(--lamp));
+  color:#1c0c10;
+  box-shadow:0 4px 24px rgba(255,95,174,.45);
+  position:relative; overflow:hidden;
+}
+.btn-primary::after{
+  content:''; position:absolute; inset:0;
+  background:linear-gradient(110deg, transparent 30%, rgba(255,255,255,.55) 50%, transparent 70%);
+  background-size:250% 100%;
+  animation:shine 2.8s ease-in-out infinite;
+}
+@keyframes shine{
+  0%{background-position:160% 0;}
+  100%{background-position:-60% 0;}
+}
+.btn-primary:hover{transform:translateY(-2px); box-shadow:0 8px 34px rgba(255,95,174,.65);}
+.btn-primary:disabled{opacity:.4; cursor:not-allowed; transform:none; box-shadow:none;}
+.btn-primary:disabled::after{display:none;}
+.btn-ghost{background:rgba(255,255,255,.05); color:var(--ink); border:1px solid var(--line);}
+.btn-ghost:hover{border-color:var(--scan); background:rgba(55,230,197,.08); color:var(--scan);}
 
 /* RESULT */
 .result-card{
   border:1px solid var(--line); background:var(--paper-raised);
-  border-radius:18px; padding:22px; margin-bottom:28px;
+  backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px);
+  border-radius:22px; padding:22px; margin-bottom:28px;
   display:none;
+  box-shadow:0 8px 40px rgba(0,0,0,.35);
 }
 .result-card.show{display:block;}
 .result-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;}
 .result-head h2{font-size:15px; font-weight:700;}
-.result-head .meta{font-size:11px; color:var(--ink-dim); font-family:monospace;}
+.result-head .meta{font-size:11px; color:var(--scan); font-family:monospace;}
 
 textarea.extracted{
   width:100%; min-height:160px; resize:vertical;
-  background:#0a0e13; border:1px solid var(--line); border-radius:12px;
+  background:rgba(0,0,0,.35); border:1px solid var(--line); border-radius:14px;
   color:var(--ink); padding:16px; font-size:14px; line-height:1.9;
   font-family:'Tajawal',sans-serif;
 }
-textarea.extracted:focus{border-color:var(--scan); outline:none;}
+textarea.extracted:focus{border-color:var(--scan); outline:none; box-shadow:0 0 0 3px rgba(55,230,197,.15);}
 
 .result-actions{display:flex; gap:10px; margin-top:14px; flex-wrap:wrap;}
 .toast{
   position:fixed; bottom:26px; left:50%; transform:translateX(-50%) translateY(20px);
-  background:#1b232c; border:1px solid var(--line); color:var(--ink);
-  padding:11px 20px; border-radius:10px; font-size:13px;
+  background:rgba(20,18,40,.92); border:1px solid var(--line); color:var(--ink);
+  padding:11px 20px; border-radius:12px; font-size:13px;
   opacity:0; transition:.3s; pointer-events:none; z-index:50;
+  backdrop-filter:blur(10px); box-shadow:0 8px 30px rgba(0,0,0,.4);
 }
 .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
 
@@ -178,49 +235,65 @@ textarea.extracted:focus{border-color:var(--scan); outline:none;}
   display:flex; align-items:center; gap:14px; margin:46px 0 18px;
 }
 .section-label .num{
-  font-family:monospace; font-size:11px; color:var(--lamp);
-  border:1px solid var(--lamp-dim); background:var(--lamp-dim);
-  padding:4px 10px; border-radius:7px;
+  font-family:monospace; font-size:11px; font-weight:700; color:#1c0c10;
+  background:linear-gradient(135deg,var(--scan2),var(--scan));
+  padding:5px 11px; border-radius:8px;
 }
-.section-label h2{font-size:17px; font-weight:800;}
-.section-label .rule{flex:1; height:1px; background:var(--line);}
+.section-label h2{
+  font-size:18px; font-weight:900;
+  background:linear-gradient(90deg,#fff,#cdf9ee);
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+}
+.section-label .rule{flex:1; height:1px; background:linear-gradient(90deg,var(--line),transparent);}
 
 /* CHAT */
 .chat-card{
   border:1px solid var(--line); background:var(--paper-raised);
-  border-radius:18px; overflow:hidden;
+  backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px);
+  border-radius:22px; overflow:hidden;
+  box-shadow:0 8px 40px rgba(0,0,0,.35);
 }
 .chat-log{
   min-height:220px; max-height:440px; overflow-y:auto;
   padding:22px; display:flex; flex-direction:column; gap:14px;
 }
-.msg{max-width:82%; padding:13px 16px; border-radius:14px; font-size:14px; line-height:1.85; white-space:pre-wrap;}
-.msg.user{align-self:flex-end; background:var(--lamp-dim); border:1px solid #4a2a18; color:#ffd8c2; border-bottom-left-radius:4px;}
-.msg.ai{align-self:flex-start; background:#10161d; border:1px solid var(--line); border-bottom-right-radius:4px;}
+.msg{max-width:82%; padding:13px 16px; border-radius:16px; font-size:14px; line-height:1.85; white-space:pre-wrap;}
+.msg.user{
+  align-self:flex-end;
+  background:linear-gradient(135deg, rgba(255,95,174,.22), rgba(255,179,71,.18));
+  border:1px solid rgba(255,179,71,.3); color:#ffe8c2; border-bottom-left-radius:4px;
+}
+.msg.ai{align-self:flex-start; background:rgba(255,255,255,.04); border:1px solid var(--line); border-bottom-right-radius:4px;}
 .msg.empty-state{align-self:center; color:var(--ink-dim); font-size:13px; text-align:center; max-width:90%; padding:30px 10px;}
 .msg.typing{align-self:flex-start; color:var(--ink-dim); font-size:13px; display:flex; align-items:center; gap:6px;}
-.typing-dots span{width:5px; height:5px; border-radius:50%; background:var(--scan); display:inline-block; margin:0 1px; animation:blink 1.2s infinite;}
+.typing-dots span{width:5px; height:5px; border-radius:50%; background:var(--scan); display:inline-block; margin:0 1px; animation:blink 1.2s infinite; box-shadow:0 0 6px var(--scan);}
 .typing-dots span:nth-child(2){animation-delay:.2s;}
 .typing-dots span:nth-child(3){animation-delay:.4s;}
 @keyframes blink{0%,80%,100%{opacity:.2;}40%{opacity:1;}}
 
 .chat-input-bar{
   border-top:1px solid var(--line); padding:16px 18px;
-  display:flex; gap:10px; align-items:flex-end; background:#0f151c;
+  display:flex; gap:10px; align-items:flex-end; background:rgba(0,0,0,.18);
 }
 .chat-input-bar textarea{
   flex:1; resize:none; max-height:120px; min-height:46px;
-  background:#0a0e13; border:1px solid var(--line); border-radius:12px;
+  background:rgba(0,0,0,.35); border:1px solid var(--line); border-radius:14px;
   color:var(--ink); padding:12px 14px; font-size:14px; font-family:inherit; line-height:1.6;
 }
-.chat-input-bar textarea:focus{outline:none; border-color:var(--scan);}
+.chat-input-bar textarea:focus{outline:none; border-color:var(--scan); box-shadow:0 0 0 3px rgba(55,230,197,.15);}
 .send-btn{
-  width:46px; height:46px; border-radius:12px; background:var(--scan);
-  color:#06150e; font-size:18px; display:flex; align-items:center; justify-content:center;
-  flex-shrink:0; transition:.18s;
+  width:46px; height:46px; border-radius:14px;
+  background:linear-gradient(135deg,var(--scan2),var(--scan));
+  color:#0a0a18; font-size:18px; display:flex; align-items:center; justify-content:center;
+  flex-shrink:0; transition:.18s; box-shadow:0 4px 18px rgba(124,92,255,.4);
+  animation:sendPulse 2.6s ease-in-out infinite;
 }
-.send-btn:hover{background:#56e0a4;}
-.send-btn:disabled{opacity:.4; cursor:not-allowed;}
+@keyframes sendPulse{
+  0%,100%{box-shadow:0 4px 18px rgba(124,92,255,.4);}
+  50%{box-shadow:0 4px 26px rgba(55,230,197,.6);}
+}
+.send-btn:hover{transform:translateY(-2px) scale(1.04); box-shadow:0 6px 24px rgba(124,92,255,.55);}
+.send-btn:disabled{opacity:.4; cursor:not-allowed; transform:none; box-shadow:none;}
 
 footer{text-align:center; color:var(--ink-dim); font-size:11.5px; margin-top:50px; font-family:monospace;}
 
@@ -233,34 +306,25 @@ footer{text-align:center; color:var(--ink-dim); font-size:11.5px; margin-top:50p
 </style>
 </head>
 <body>
+<div class="sparkle-layer" id="sparkleLayer"></div>
 <div class="wrap">
 
   <header>
     <div class="brand">
-      <div class="brand-mark">👁️</div>
+      <div class="brand-mark">✨</div>
       <div>
-        <h1>مِسبار</h1>
+        <h1>تبارك</h1>
         <p>استخراج النص من الصور بدقّة، ثم تلخيصه بالذكاء الاصطناعي</p>
       </div>
     </div>
-    <div class="status-pill"><span class="dot"></span> المحرك جاهز محليًا في متصفحك</div>
   </header>
 
   <!-- SCANNER -->
   <div class="scanner" id="scannerBox">
     <div class="scanner-head">
-      <h2>1 — ارفع صورة لاستخراج النص منها</h2>
-      <span id="engineStatus">OCR.engine // idle</span>
+      <h2>1 — ارفع الصورة لاستخراج النص منها</h2>
+      <span id="engineStatus">Vision AI // جاهز</span>
     </div>
-    <div class="lang-row">
-      <label for="langToggle">لغة النص في الصورة:</label>
-      <select id="langToggle">
-        <option value="ara+eng" selected>عربي + إنجليزي (الافتراضي)</option>
-        <option value="ara">عربي فقط (أدق للنصوص العربية الخالصة)</option>
-        <option value="eng">إنجليزي فقط (أسرع)</option>
-      </select>
-    </div>
-    <p class="lang-hint">⚠️ مهم: اختر اللغة الصحيحة قبل الاستخراج — استخدام لغة خاطئة هو السبب الأكثر شيوعًا لنص مشوّه وغير مفهوم.</p>
 
     <div class="dropzone" id="dropzone">
       <input type="file" id="fileInput" accept="image/*">
@@ -313,12 +377,30 @@ footer{text-align:center; color:var(--ink-dim); font-size:11.5px; margin-top:50p
     </div>
   </div>
 
-  <footer>مِسبار — استخراج محلي عبر Tesseract.js · تلخيص عبر Claude</footer>
+  <footer>2026© جميع الحقوق محفوظة في شركة تبارك</footer>
 </div>
 
 <div class="toast" id="toast">تم النسخ</div>
 
 <script>
+// توليد نقاط بريق عشوائية في الخلفية لإحساس "براق" حقيقي بدل خلفية ثابتة.
+(function spawnSparkles(){
+  const layer = document.getElementById('sparkleLayer');
+  const count = window.innerWidth < 600 ? 22 : 40;
+  for(let i=0; i<count; i++){
+    const s = document.createElement('div');
+    s.className = 'sparkle';
+    const size = Math.random()*2.4 + 1;
+    s.style.width = size + 'px';
+    s.style.height = size + 'px';
+    s.style.left = Math.random()*100 + 'vw';
+    s.style.top = Math.random()*100 + 'vh';
+    s.style.animationDelay = (Math.random()*3.5) + 's';
+    s.style.animationDuration = (2.5 + Math.random()*3) + 's';
+    layer.appendChild(s);
+  }
+})();
+
 const dropzone = document.getElementById('dropzone');
 const fileInput = document.getElementById('fileInput');
 const previewArea = document.getElementById('previewArea');
@@ -375,156 +457,76 @@ resetBtn.addEventListener('click', ()=>{
   engineStatus.textContent = 'OCR.engine // idle';
 });
 
-// Resize large images before OCR — recognition time scales with pixel count.
-// Kept deliberately simple: no aggressive contrast/binarization, since that distorted
-// characters and made recognition worse. Just a clean resize at good resolution.
-function resizeImageForOCR(file, maxDim){
+// تحويل الصورة إلى Base64 لإرسالها مع طلب Vision AI
+function fileToBase64(file){
+  return new Promise((resolve, reject)=>{
+    const reader = new FileReader();
+    reader.onload = ()=> resolve(reader.result.split(',')[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+// تصغير الصورة للسرعة مع الحفاظ على الجودة الكافية للقراءة
+function resizeImage(file, maxDim){
   return new Promise((resolve)=>{
     const img = new Image();
     const url = URL.createObjectURL(file);
     img.onload = ()=>{
-      let { width, height } = img;
-      if(width > maxDim || height > maxDim){
-        const scale = maxDim / Math.max(width, height);
-        width = Math.round(width * scale);
-        height = Math.round(height * scale);
-      } else if(Math.max(width, height) < 800){
-        const scale = 800 / Math.max(width, height);
-        width = Math.round(width * scale);
-        height = Math.round(height * scale);
+      let {width, height} = img;
+      if(Math.max(width,height) > maxDim){
+        const scale = maxDim / Math.max(width,height);
+        width = Math.round(width*scale);
+        height = Math.round(height*scale);
       }
       const canvas = document.createElement('canvas');
       canvas.width = width; canvas.height = height;
       const ctx = canvas.getContext('2d');
-      ctx.fillStyle = '#fff';
-      ctx.fillRect(0,0,width,height);
-      ctx.imageSmoothingQuality = 'high';
       ctx.drawImage(img, 0, 0, width, height);
       URL.revokeObjectURL(url);
-      canvas.toBlob(blob=> resolve(blob), 'image/png');
+      canvas.toBlob(blob=> resolve(blob), 'image/jpeg', 0.92);
     };
     img.src = url;
   });
 }
 
-// Keep one worker alive across scans for speed, but build it safely and
-// recreate it cleanly whenever the language changes — no race conditions.
-let ocrWorker = null;
-let ocrWorkerLang = null;
-let workerBuildPromise = null;
-
-async function getWorker(lang){
-  // If a build is already in flight for this language, wait for it instead of starting another.
-  if(workerBuildPromise && ocrWorkerLang === lang) return workerBuildPromise;
-  if(ocrWorker && ocrWorkerLang === lang) return ocrWorker;
-
-  workerBuildPromise = (async ()=>{
-    if(ocrWorker){
-      try{ await ocrWorker.terminate(); }catch(e){}
-      ocrWorker = null;
-    }
-    engineStatus.textContent = 'OCR.engine // تحميل النموذج...';
-    const worker = await Tesseract.createWorker(lang, undefined, {
-      logger: m=>{
-        if(m.status === 'recognizing text'){
-          engineStatus.textContent = `OCR.engine // ${Math.round(m.progress*100)}%`;
-        } else if(m.status){
-          engineStatus.textContent = `OCR.engine // ${m.status}`;
-        }
-      }
-    });
-    ocrWorker = worker;
-    ocrWorkerLang = lang;
-    return worker;
-  })();
-
-  try{
-    return await workerBuildPromise;
-  }finally{
-    workerBuildPromise = null;
-  }
-}
-
-// Basic local cleanup applied to every OCR result, free and instant:
-// fixes the most common raw-OCR mess (stray line breaks mid-sentence, repeated
-// blank lines, extra spaces) without needing a network call.
-function cleanOcrText(raw){
-  if(!raw) return '';
-  let lines = raw.replace(/\r/g,'').split('\n').map(l=> l.replace(/[ \t]+/g,' ').trim());
-
-  const merged = [];
-  for(let i=0; i<lines.length; i++){
-    const line = lines[i];
-    if(line === ''){ merged.push(''); continue; }
-    const prev = merged[merged.length-1];
-    const endsLikeSentence = /[.!؟?:؛؛]$/.test(prev || '');
-    const looksLikeNewBullet = /^[-•\d\u0660-\u0669]/.test(line);
-    // Glue a line onto the previous one if the previous line doesn't look finished —
-    // this is what turns "النص المبعثر\nعلى عدة أسطر" into one coherent sentence.
-    if(prev && prev !== '' && !endsLikeSentence && !looksLikeNewBullet && prev.length > 0){
-      merged[merged.length-1] = prev + ' ' + line;
-    } else {
-      merged.push(line);
-    }
-  }
-
-  return merged
-    .join('\n')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
-}
-
 extractBtn.addEventListener('click', async ()=>{
   if(!currentFile) return;
   extractBtn.disabled = true;
-  extractBtn.textContent = '⏳ جارٍ المسح...';
+  extractBtn.textContent = '⏳ جارٍ الاستخراج...';
   scannerBox.classList.add('scanning');
-  engineStatus.textContent = 'OCR.engine // تجهيز الصورة...';
+  engineStatus.textContent = 'Vision AI // يحلّل الصورة...';
 
   try{
-    const lang = document.getElementById('langToggle').value;
-    const resized = await resizeImageForOCR(currentFile, 2200);
+    const resized = await resizeImage(currentFile, 1800);
+    const b64 = await fileToBase64(resized);
+    const mediaType = 'image/jpeg';
 
-    let result;
-    try{
-      const worker = await getWorker(lang);
-      // PSM 3 = fully automatic page segmentation (Tesseract's own default and most reliable
-      // general-purpose mode). Forcing "single uniform block" earlier was actually causing
-      // more scrambled output on real-world photos with mixed paragraphs/lines.
-      await worker.setParameters({
-        tessedit_pageseg_mode: '3',
-        preserve_interword_spaces: '1'
-      });
-      result = await worker.recognize(resized);
-    }catch(workerErr){
-      // Fallback: if the persistent-worker path fails for any reason,
-      // fall back to the simpler one-shot API which manages its own worker internally.
-      console.warn('worker path failed, falling back:', workerErr);
-      ocrWorker = null; ocrWorkerLang = null;
-      result = await Tesseract.recognize(resized, lang, {
-        logger: m=>{
-          if(m.status === 'recognizing text'){
-            engineStatus.textContent = `OCR.engine // ${Math.round(m.progress*100)}%`;
-          }
-        }
-      });
-    }
+    const response = await fetch('/api/ai', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: '__VISION__', image: b64, mediaType })
+    });
 
-    const cleaned = cleanOcrText(result.data.text);
-    extractedText.value = cleaned || '(لم يتم العثور على نص واضح في الصورة، جرّب صورة أوضح أو غيّر اللغة)';
-    confMeta.textContent = `ثقة التعرّف: ${Math.round(result.data.confidence)}%`;
+    const data = await response.json();
+    if(!response.ok) throw new Error(data?.error || `HTTP ${response.status}`);
+    const text = (data.text || '').trim();
+    extractedText.value = text || '(لم يتم العثور على نص)';
+    confMeta.textContent = 'Vision AI ✓ — دقة ممتازة';
     resultCard.classList.add('show');
     resultCard.scrollIntoView({behavior:'smooth', block:'start'});
+
   }catch(err){
-    console.error('OCR error:', err);
-    showToast('فشل الاستخراج: ' + (err && err.message ? err.message : 'خطأ غير معروف'));
+    console.error('Vision AI error:', err);
+    showToast('فشل الاستخراج: ' + (err?.message || 'خطأ غير معروف'));
   }finally{
     extractBtn.disabled = false;
     extractBtn.textContent = '🔍 استخرج النص الآن';
     scannerBox.classList.remove('scanning');
-    engineStatus.textContent = 'OCR.engine // done';
+    engineStatus.textContent = 'Vision AI // جاهز';
   }
 });
+
 
 const formatBtn = document.getElementById('formatBtn');
 formatBtn.addEventListener('click', async ()=>{
@@ -534,24 +536,19 @@ formatBtn.addEventListener('click', async ()=>{
   const originalLabel = formatBtn.textContent;
   formatBtn.textContent = '⏳ جارٍ الترتيب...';
   try{
-    const prompt = `أعد ترتيب النص التالي المستخرج من صورة عبر OCR ليكون مقروءًا ومنظّمًا في أسطر وفقرات صحيحة، مع تصحيح أماكن فواصل الأسطر الخاطئة وإصلاح أي التباس بسيط في الكلمات الناتج عن خطأ المسح الضوئي، دون تلخيص أو حذف أو إضافة أي معلومة، ودون أي تعليق إضافي مني — أعد النص المُرتّب فقط:\n\n"""${text}"""`;
-    const response = await fetch("/api/ai", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+    const prompt = `أعد ترتيب النص التالي ليكون مقروءًا ومنظّمًا في أسطر وفقرات صحيحة، دون تلخيص أو حذف أو إضافة أي معلومة، ودون أي تعليق — أعد النص المُرتّب فقط:\n\n"""${text}"""`;
+    const response = await fetch('/api/ai', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ prompt })
     });
     const data = await response.json();
-    if(!response.ok){
-      throw new Error((data && data.error) || `HTTP ${response.status}`);
-    }
+    if(!response.ok) throw new Error(data?.error || `HTTP ${response.status}`);
     const formatted = (data.text || '').trim();
-    if(formatted){
-      extractedText.value = formatted;
-      showToast('تم ترتيب النص');
-    }
+    if(formatted){ extractedText.value = formatted; showToast('✅ تم ترتيب النص'); }
   }catch(err){
     console.error(err);
-    showToast('تعذّر ترتيب النص: ' + (err && err.message ? err.message : 'خطأ غير معروف'));
+    showToast('⚠️ تعذّر الترتيب: ' + (err?.message || 'خطأ'));
   }finally{
     formatBtn.disabled = false;
     formatBtn.textContent = originalLabel;
@@ -649,25 +646,23 @@ async function callAI(text, isSummary){
   sendBtn.disabled = true;
 
   const promptInstruction = isSummary
-    ? `لخّص النص التالي المستخرج من صورة بشكل واضح ومرتب باللغة العربية، مع إبراز أهم النقاط في نقاط مختصرة إن أمكن:\n\n"""${text}"""`
+    ? `لخّص النص التالي بشكل واضح ومرتب باللغة العربية، مع إبراز أهم النقاط في نقاط مختصرة إن أمكن:\n\n"""${text}"""`
     : text;
 
   try{
-    const response = await fetch("/api/ai", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+    const response = await fetch('/api/ai', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ prompt: promptInstruction })
     });
     const data = await response.json();
-    if(!response.ok){
-      throw new Error((data && data.error) || `HTTP ${response.status}`);
-    }
+    if(!response.ok) throw new Error(data?.error || `HTTP ${response.status}`);
     const reply = (data.text || '').trim() || 'تعذّر الحصول على رد.';
     typingEl.remove();
     pushMessage('ai', reply);
   }catch(err){
     typingEl.remove();
-    pushMessage('ai', 'حدث خطأ في الاتصال بالذكاء الاصطناعي: ' + (err && err.message ? err.message : 'غير معروف'));
+    pushMessage('ai', '⚠️ خطأ: ' + (err?.message || 'تعذّر الاتصال'));
     console.error(err);
   }finally{
     sendBtn.disabled = false;

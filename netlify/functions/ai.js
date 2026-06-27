@@ -1,6 +1,6 @@
-// دالة Netlify الخادمة: تستقبل الطلب من الموقع، تضيف مفتاح Groq السرّي
-// من متغيرات البيئة، وترسل الطلب الحقيقي لـ Groq. المفتاح لا يظهر أبدًا
-// في كود المتصفح ولا على GitHub.
+// دالة Netlify: تعالج نوعين من الطلبات:
+// 1) Vision — استخراج نص من صورة (يُرسل base64 مع prompt='__VISION__')
+// 2) Text  — تلخيص أو ترتيب نص عادي
 
 const requestLog = new Map();
 const RATE_LIMIT = 15;
@@ -28,19 +28,8 @@ export default async (req, context) => {
   }
 
   let body;
-  try {
-    body = await req.json();
-  } catch {
-    return new Response(JSON.stringify({ error: 'طلب غير صالح.' }), { status: 400 });
-  }
-
-  const prompt = body && body.prompt;
-  if (!prompt || typeof prompt !== 'string' || prompt.length > 20000) {
-    return new Response(
-      JSON.stringify({ error: 'نص الطلب مفقود أو طويل جدًا.' }),
-      { status: 400, headers: { 'Content-Type': 'application/json' } }
-    );
-  }
+  try { body = await req.json(); }
+  catch { return new Response(JSON.stringify({ error: 'طلب غير صالح.' }), { status: 400 }); }
 
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) {
@@ -50,26 +39,56 @@ export default async (req, context) => {
     );
   }
 
+  const isVision = body.prompt === '__VISION__' && body.image;
+
+  let messages;
+  if (isVision) {
+    // طلب استخراج نص من صورة — يستخدم نموذج Groq الذي يدعم الصور
+    messages = [{
+      role: 'user',
+      content: [
+        {
+          type: 'image_url',
+          image_url: {
+            url: `data:${body.mediaType || 'image/jpeg'};base64,${body.image}`
+          }
+        },
+        {
+          type: 'text',
+          text: `استخرج كل النص الموجود في هذه الصورة كما هو بالضبط، بنفس الترتيب وبنفس فقراته وأسطره الطبيعية.
+لا تلخّص ولا تضف ولا تحذف شيئًا.
+لا تكتب أي تعليق أو مقدمة — فقط النص المستخرج مباشرة.
+إذا لم يوجد نص في الصورة اكتب: (لا يوجد نص في هذه الصورة)`
+        }
+      ]
+    }];
+  } else {
+    // طلب نص عادي (تلخيص / ترتيب / محادثة)
+    const { prompt } = body;
+    if (!prompt || typeof prompt !== 'string' || prompt.length > 20000) {
+      return new Response(
+        JSON.stringify({ error: 'نص الطلب مفقود أو طويل جدًا.' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+    messages = [{ role: 'user', content: prompt }];
+  }
+
   try {
+    const model = isVision ? 'meta-llama/llama-4-scout-17b-16e-instruct' : 'llama-3.3-70b-versatile';
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`
       },
-      body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        messages: [{ role: 'user', content: prompt }],
-        max_tokens: 2000,
-        temperature: 0.3
-      })
+      body: JSON.stringify({ model, messages, max_tokens: 3000, temperature: 0.2 })
     });
 
     const data = await response.json();
     if (!response.ok) {
-      console.error('Groq API error:', data);
       return new Response(
-        JSON.stringify({ error: (data && data.error && data.error.message) || 'خطأ من خدمة الذكاء الاصطناعي.' }),
+        JSON.stringify({ error: data?.error?.message || 'خطأ من خدمة الذكاء الاصطناعي.' }),
         { status: response.status, headers: { 'Content-Type': 'application/json' } }
       );
     }
@@ -79,6 +98,7 @@ export default async (req, context) => {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     });
+
   } catch (err) {
     console.error('Proxy error:', err);
     return new Response(
