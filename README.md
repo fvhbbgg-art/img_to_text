@@ -1,68 +1,69 @@
-# مِسبار — نشر مجاني بالكامل (GitHub + Netlify + Groq)
+# تبارك — نشر مجاني بالكامل (GitHub + Netlify + Groq)
 
-موقع لاستخراج النص من الصور (OCR محلي مجاني) وتلخيصه/ترتيبه بالذكاء الاصطناعي
-عبر **Groq** (مجاني، سريع جدًا، بدون بطاقة دفع).
+موقع لاستخراج النص من الصور بدقة عالية عبر **Vision AI** وتلخيصه/ترتيبه
+باستخدام **Groq** (مجاني، سريع جدًا، بدون بطاقة دفع).
 
 ---
 
 ## كيف يعمل
 
 ```
-الزائر  →  الموقع (ثابت، على Netlify)  →  /api/ai (دالة Netlify الخادمة)  →  Groq (بالمفتاح السري)
+الزائر  →  الموقع (Netlify)  →  /api/ai (دالة Netlify)  →  Groq Vision/LLM
 ```
 
-مفتاح Groq يبقى محفوظًا فقط داخل إعدادات Netlify، ولا يظهر أبدًا في كود الموقع أو على GitHub.
+- **استخراج النص**: يُرسل الصورة لنموذج Groq Vision — دقة عالية بكل اللغات (عربي، إنجليزي، وغيرها)
+- **التلخيص والمحادثة**: نموذج Groq النصي السريع
+- **المفتاح محمي**: لا يظهر في كود الموقع أو على GitHub أبدًا
 
 ---
 
-## الخطوات (10 دقائق تقريبًا)
+## الملفات
+
+```
+misbar-netlify/
+├── public/
+│   └── index.html          ← الموقع (الواجهة) — يتصل بـ /api/ai فقط
+├── netlify/
+│   └── functions/
+│       └── ai.js           ← الدالة الخادمة (Vision + Text) عبر Groq
+├── netlify.toml            ← إعدادات النشر والتوجيه
+├── .gitignore
+└── package.json
+```
+
+---
+
+## خطوات النشر (10 دقائق)
 
 ### 1) احصل على مفتاح Groq مجانًا
-- console.groq.com → سجّل دخول (بريد إلكتروني فقط)
+- console.groq.com → تسجيل (بريد فقط، بدون بطاقة)
 - API Keys → Create API Key → احتفظ به
 
-### 2) ارفع المشروع على GitHub
-- أنشئ مستودع (Repository) فاضي جديد
-- ارفع كل ملفات هذا المجلد:
+### 2) ارفع على GitHub
 ```bash
 git init
 git add .
-git commit -m "أول نسخة من مِسبار"
+git commit -m "تبارك v1"
 git branch -M main
 git remote add origin https://github.com/USERNAME/REPO.git
 git push -u origin main
 ```
-⚠️ ملف `.env` مستثنى تلقائيًا — لا ترفعه يدويًا أبدًا.
 
-### 3) اربط المستودع بـ Netlify
-- netlify.com → سجّل دخول بحساب GitHub
-- "Add new site" → "Import an existing project" → اختر المستودع
-- Netlify يكتشف `netlify.toml` تلقائيًا (مجلد النشر `public`، والدوال في `netlify/functions`) — لا تحتاج تغيير أي إعداد
+### 3) اربط بـ Netlify
+- netlify.com → Add new site → Import an existing project → اختر المستودع
+- الإعدادات تُكتشف تلقائيًا من `netlify.toml`
 
-### 4) أضف مفتاح Groq كمتغيّر بيئة
-- Site configuration → Environment variables → Add a variable
-- الاسم: `GROQ_API_KEY`
-- القيمة: مفتاحك من Groq
-- احفظ، ثم Deploys → Trigger deploy لإعادة النشر بحيث يلتقط المتغيّر الجديد
+### 4) أضف المفتاح
+- Site configuration → Environment variables
+- الاسم: `GROQ_API_KEY` | القيمة: مفتاحك
+- Deploys → Trigger deploy
 
-### 5) انتهيت
-Netlify بيعطيك رابطًا مثل:
+### 5) انتهيت 🎉
 ```
-https://misbar.netlify.app
+https://tabaarak.netlify.app
 ```
-شاركه مع أي شخص — الموقع يعمل بالكامل والمفتاح محمي.
 
 ---
 
-## التحكم بالاستهلاك
-حصة Groq المجانية يومية ومحدودة. الدالة في `netlify/functions/ai.js` فيها حد بسيط
-(15 طلب/دقيقة لكل زائر) لمنع استنزاف الحصة من شخص واحد. راقب استهلاكك من console.groq.com
-إذا زادت الزيارات.
-
----
-
-## ملفات المشروع
-- `public/index.html` — الموقع (الواجهة) — يتصل بـ `/api/ai` فقط، لا يحتوي أي مفتاح
-- `netlify/functions/ai.js` — الدالة الخادمة، تتصل بـ Groq بالمفتاح السري من متغيرات البيئة
-- `netlify.toml` — إعدادات النشر وإعادة التوجيه من `/api/ai` إلى الدالة الفعلية
-- `.gitignore` — يمنع رفع أي ملف أسرار بالخطأ
+## ملاحظة
+⚠️ لا ترفع ملف `.env` على GitHub — المفتاح يوضع فقط في إعدادات Netlify.
